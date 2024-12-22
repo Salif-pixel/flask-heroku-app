@@ -1,11 +1,11 @@
 import os
 
-from flask import Flask, request, jsonify
+import streamlit as st
 import pefile
 import joblib
 import pandas as pd
 
-app = Flask(__name__)
+
 
 # Charger le modèle
 model = joblib.load("optimized_model.pkl")
@@ -47,49 +47,23 @@ def extract_features(executable_path):
         return None
 
 
-@app.route('/')
-def home():
-    print("Page d'accueil appelée")
-    return "Flask est en ligne!"
+# Interface Streamlit
+st.title("Détection de Malware")
 
+uploaded_file = st.file_uploader("Téléversez un fichier exécutable", type=["exe"])
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    try:
-        # Vérifier si un fichier a été envoyé
-        if 'file' not in request.files:
-            return jsonify({"error": "Aucun fichier envoyé"}), 400
+if uploaded_file is not None:
+    with open(f"./temp/{uploaded_file.name}", "wb") as f:
+        f.write(uploaded_file.getbuffer())
+        file_path = f"./temp/{uploaded_file.name}"
 
-        # Obtenir le fichier uploadé
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "Aucun fichier sélectionné"}), 400
+    st.write("Analyse du fichier en cours...")
+    features = extract_features(file_path)
 
-        file_path = f"./uploaded_files/{file.filename}"
-
-        # Créer le dossier 'uploaded_files' s'il n'existe pas
-        if not os.path.exists('./uploaded_files'):
-            os.makedirs('./uploaded_files')
-
-        file.save(file_path)
-
-        # Extraire les caractéristiques (mettre ici ta fonction d'extraction)
-        features = extract_features(file_path)
-
-        if features is None:
-            return jsonify({"error": "Erreur lors de l'extraction des caractéristiques"}), 400
-
-        # Convertir en DataFrame
+    if features is None:
+        st.error("Erreur lors de l'extraction des caractéristiques.")
+    else:
         features_df = pd.DataFrame([features])
-
-        # Faire la prédiction
         prediction = model.predict(features_df)[0]
-        result = "Ce fichier est un Malware" if prediction == 1 else "Ce fichier n'est pas un Malware"
-        return jsonify({"result": result})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+        result = "Malware" if prediction == 1 else "Non-Malware"
+        st.success(f"Résultat : {result}")
