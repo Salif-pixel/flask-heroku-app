@@ -48,16 +48,42 @@ def extract_features(executable_path):
 
 
 # Interface Streamlit
-st.title("Détection de Malware")
+# Titre et image
+st.title("Détection de Malware avec Machine Learning")
+st.image("https://db0dce98.rocketcdn.me/wp-content/uploads/2020/11/Machine-learning-def-.png",
+         use_container_width=True)
 
+st.markdown("""
+Cette application utilise un modèle de machine learning pour détecter si un fichier exécutable est un **malware** ou **non-malware**.
+Téléversez un fichier .exe et obtenez instantanément une analyse.
+""")
+
+# Ajouter une section avec un fond coloré
+st.markdown("""
+<style>
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        font-size: 18px;
+        height: 50px;
+        width: 150px;
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Ajouter un uploader de fichiers
 uploaded_file = st.file_uploader("Téléversez un fichier exécutable", type=["exe"])
 
+# Vérifier si un fichier a été téléchargé
 if uploaded_file is not None:
     with open(f"./temp/{uploaded_file.name}", "wb") as f:
         f.write(uploaded_file.getbuffer())
         file_path = f"./temp/{uploaded_file.name}"
 
     st.write("Analyse du fichier en cours...")
+
     features = extract_features(file_path)
 
     if features is None:
@@ -66,4 +92,16 @@ if uploaded_file is not None:
         features_df = pd.DataFrame([features])
         prediction = model.predict(features_df)[0]
         result = "Malware" if prediction == 1 else "Non-Malware"
-        st.success(f"Résultat : {result}")
+
+        # Ajout d'un graphique de résultat
+        if result == "Malware":
+            st.warning(f"**Résultat : {result}** 🛑", icon="⚠️")
+        else:
+            st.success(f"**Résultat : {result}** ✅", icon="✔️")
+
+        # Afficher plus de détails ou recommandation
+        st.markdown("""
+        ### Détails supplémentaires :
+        - Vous pouvez télécharger un autre fichier ou analyser un autre programme.
+        - Si vous avez des doutes sur un fichier, assurez-vous d'utiliser un antivirus de confiance.
+        """)
